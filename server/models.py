@@ -14,8 +14,8 @@ class Author(db.Model):
     def validate_name(self, key, name):
         if not name or name.strip() == "":
             raise ValueError("Author must have a name")
-        # Check uniqueness manually
-        if Author.query.filter_by(name=name).first():
+        existing_author = Author.query.filter_by(name=name).first()
+        if existing_author and existing_author != self:
             raise ValueError("Author name must be unique")
         return name
 
@@ -35,17 +35,16 @@ class Post(db.Model):
     summary = db.Column(db.String, default="")
     category = db.Column(db.String, nullable=False)
 
-    CLICKBAIT_WORDS = ["secret", "top", "guess", "won't believe", "shocking"]
+    CLICKBAIT_WORDS = ["won't believe", "secret", "top", "guess"]
 
     @validates("title")
     def validate_title(self, key, value):
         if not value or value.strip() == "":
             raise ValueError("Post must have a title")
-        # Clickbait check only if other fields exist
-        if hasattr(self, "content") and hasattr(self, "summary") and hasattr(self, "category"):
-            for word in self.CLICKBAIT_WORDS:
-                if word.lower() in value.lower():
-                    raise ValueError("Clickbait titles are not allowed")
+        # The title MUST contain at least one clickbait word
+        lower_title = value.lower()
+        if not any(word in lower_title for word in self.CLICKBAIT_WORDS):
+            raise ValueError("Post title must be clickbait-y")
         return value
 
     @validates("content")
